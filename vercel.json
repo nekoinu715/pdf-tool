@@ -1,6 +1,24 @@
 {
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/(.*)", "destination": "/public/index.html" }
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/*.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "public/index.html",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    { "src": "/api/health", "dest": "/api/health.js" },
+    { "src": "/api/convert-to-pdf", "dest": "/api/convert-to-pdf.js" },
+    { "src": "/api/export-pdf", "dest": "/api/export-pdf.js" },
+    { "src": "/api/protect-pdf", "dest": "/api/protect-pdf.js" },
+    { "src": "/api/check-protection", "dest": "/api/check-protection.js" },
+    { "src": "/api/remove-metadata", "dest": "/api/remove-metadata.js" },
+    { "src": "/api/organize-pages", "dest": "/api/organize-pages.js" },
+    { "src": "/api/delete-pages", "dest": "/api/delete-pages.js" },
+    { "src": "/(.*)", "dest": "/public/index.html" }
   ]
 }
