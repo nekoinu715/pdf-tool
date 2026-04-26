@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acrobat Services API Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: #f5f5f7;
+  color: #1d1d1f;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+.header {
+  background: #fff;
+  border-bottom: 1px solid #e5e5e5;
+  padding: 0 32px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1d1d1f;
+}
+.header-logo-icon {
+  width: 28px;
+  height: 28px;
+  background: #fa0f00;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #6e6e73;
+}
+.status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #34c759;
+}
+.status-dot.offline { background: #ff3b30; }
+
+/* ── LAYOUT ── */
+.layout { display: flex; min-height: calc(100vh - 56px); }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: #fff;
+  border-right: 1px solid #e5e5e5;
+  padding: 16px 0;
+}
+.nav-section { margin-bottom: 4px; }
+.nav-section-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #aeaeb2;
+  padding: 8px 16px 4px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 16px;
+  font-size: 13.5px;
+  color: #3d3d3d;
+  cursor: pointer;
+  transition: background 0.1s;
+  border-left: 2px solid transparent;
+  margin-bottom: 1px;
+}
+.nav-item:hover { background: #f5f5f7; }
+.nav-item.active {
+  background: #fff4f4;
+  border-left-color: #fa0f00;
+  color: #fa0f00;
+  font-weight: 500;
+}
+.nav-icon { font-size: 14px; width: 18px; text-align: center; }
+
+/* ── MAIN ── */
+.main {
+  flex: 1;
+  padding: 28px 36px;
+  max-width: 760px;
+}
+
+.panel { display: none; }
+.panel.active { display: block; }
+
+.panel-title { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+.panel-desc { font-size: 13px; color: #6e6e73; margin-bottom: 20px; line-height: 1.5; }
+
+/* ── CARD ── */
+.card {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 14px;
+}
+
+/* ── DROP ZONE ── */
+.drop-zone {
+  border: 1.5px dashed #d2d2d7;
+  border-radius: 10px;
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: #fafafa;
+  position: relative;
+}
+.drop-zone:hover, .drop-zone.dragging { border-color: #fa0f00; background: #fff8f8; }
+.drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.drop-icon { font-size: 28px; margin-bottom: 8px; }
+.drop-title { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+.drop-sub { font-size: 12px; color: #aeaeb2; }
+
+/* ── FILE CHIP ── */
+.file-chip {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #f5f5f7;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+.file-chip.visible { display: flex; }
+.file-chip-icon { font-size: 18px; }
+.file-chip-info { flex: 1; min-width: 0; }
+.file-chip-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-chip-size { font-size: 11px; color: #aeaeb2; }
+.file-chip-remove { background: none; border: none; font-size: 16px; color: #aeaeb2; cursor: pointer; padding: 2px 4px; border-radius: 4px; }
+.file-chip-remove:hover { color: #ff3b30; }
+
+/* ── FORM ── */
+.form-group { margin-bottom: 12px; }
+.form-label { font-size: 12px; font-weight: 500; color: #3d3d3d; margin-bottom: 5px; display: block; }
+.form-input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #d2d2d7;
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  color: #1d1d1f;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.form-input:focus { border-color: #fa0f00; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* ── BUTTON ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 20px;
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+}
+.btn-primary { background: #fa0f00; color: #fff; }
+.btn-primary:hover { background: #d40d00; }
+.btn-primary:disabled { background: #ffb3af; cursor: not-allowed; }
+.btn-secondary { background: #f5f5f7; color: #1d1d1f; border: 1px solid #d2d2d7; }
+.btn-secondary:hover { background: #e8e8ed; }
+
+/* ── PROGRESS ── */
+.progress-wrap { display: none; margin-bottom: 14px; }
+.progress-wrap.visible { display: block; }
+.progress-label { font-size: 12px; color: #6e6e73; margin-bottom: 6px; }
+.progress-bar { height: 3px; background: #e5e5e5; border-radius: 2px; overflow: hidden; }
+.progress-fill {
+  height: 100%; background: #fa0f00; border-radius: 2px;
+  animation: prog 1.4s ease-in-out infinite;
+}
+@keyframes prog {
+  0%   { transform: translateX(-100%); width: 40%; }
+  50%  { transform: translateX(60%);   width: 60%; }
+  100% { transform: translateX(200%);  width: 40%; }
+}
+
+/* ── RESULT ── */
+.result { display: none; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 8px; margin-bottom: 14px; font-size: 13px; }
+.result.visible { display: flex; }
+.result.success { background: #f0faf4; border: 1px solid #b7e4c7; }
+.result.error   { background: #fff5f5; border: 1px solid #ffc9c9; }
+.result-icon { font-size: 16px; }
+.result-body { flex: 1; }
+.result-title { font-weight: 500; }
+.result-sub { font-size: 11px; color: #6e6e73; margin-top: 1px; }
+.result-dl { padding: 7px 14px; background: #1d1d1f; color: #fff; border-radius: 6px; font-size: 12px; font-weight: 500; text-decoration: none; white-space: nowrap; }
+
+/* ── CHECK GRID ── */
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.info-cell { background: #f5f5f7; border-radius: 8px; padding: 12px 14px; }
+.info-cell-label { font-size: 11px; color: #aeaeb2; margin-bottom: 3px; }
+.info-cell-value { font-size: 14px; font-weight: 500; }
+
+/* ── PAGE ORGANIZER ── */
+.page-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.page-thumb { border: 1.5px solid #e5e5e5; border-radius: 8px; overflow: hidden; cursor: grab; transition: all 0.15s; background: #fff; }
+.page-thumb:hover { border-color: #aeaeb2; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.page-thumb.drag-over { border-color: #fa0f00; background: #fff8f8; }
+.page-canvas { width: 100%; aspect-ratio: 8.5/11; background: #f5f5f7; overflow: hidden; }
+.page-canvas canvas { width: 100% !important; height: 100% !important; object-fit: cover; display: block; }
+.page-footer { display: flex; align-items: center; justify-content: space-between; padding: 5px 7px; background: #fff; }
+.page-num { font-size: 10px; color: #aeaeb2; font-weight: 500; }
+.page-del { background: none; border: none; font-size: 12px; color: #d2d2d7; cursor: pointer; }
+.page-del:hover { color: #ff3b30; }
+
+/* ── VIEWER ── */
+.viewer-bar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #f5f5f7; border-radius: 8px; margin-bottom: 12px; }
+.viewer-bar-name { flex: 1; font-size: 13px; font-weight: 500; }
+.viewer-bar-count { font-size: 12px; color: #6e6e73; }
+.viewer-pages { display: flex; flex-direction: column; gap: 10px; max-height: 640px; overflow-y: auto; }
+.viewer-page { background: #fff; border: 1px solid #e5e5e5; border-radius: 6px; overflow: hidden; position: relative; }
+.viewer-page canvas { display: block; width: 100% !important; height: auto !important; }
+.viewer-page-badge { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.5); color: #fff; font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 4px; }
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-thumb { background: #d2d2d7; border-radius: 3px; }
+
+.spinner { width: 13px; height: 13px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.65s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-logo">
+    <div class="header-logo-icon">📄</div>
+    Acrobat Services API — Demo
+  </div>
+  <div class="header-right">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-text">接続確認中...</span>
+  </div>
+</header>
+
+<div class="layout">
+
+  <nav class="sidebar">
+    <div class="nav-section">
+      <div class="nav-section-label">変換</div>
+      <div class="nav-item active" data-panel="to-pdf"><span class="nav-icon">📥</span> ファイル → PDF</div>
+      <div class="nav-item" data-panel="to-pptx"><span class="nav-icon">📊</span> PDF → PowerPoint</div>
+      <div class="nav-item" data-panel="to-docx"><span class="nav-icon">📝</span> PDF → Word</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">セキュリティ</div>
+      <div class="nav-item" data-panel="protect"><span class="nav-icon">🔒</span> パスワード設定</div>
+      <div class="nav-item" data-panel="check"><span class="nav-icon">🔍</span> 保護チェック</div>
+      <div class="nav-item" data-panel="metadata"><span class="nav-icon">🧹</span> メタデータ削除</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-label">ページ編集</div>
+      <div class="nav-item" data-panel="viewer"><span class="nav-icon">👁</span> PDFビューア</div>
+      <div class="nav-item" data-panel="organize"><span class="nav-icon">🔀</span> ページ並び替え</div>
+      <div class="nav-item" data-panel="delete"><span class="nav-icon">🗑</span> ページ削除</div>
+    </div>
+  </nav>
+
+  <main class="main">
+
+    <!-- ファイル → PDF -->
+    <div class="panel active" id="panel-to-pdf">
+      <div class="panel-title">ファイル → PDF 変換</div>
+      <div class="panel-desc">Word、PowerPoint、Excel ファイルを PDF に変換します。</div>
+      <div class="card">
+        <div class="drop-zone" id="dz-to-pdf">
+          <div class="drop-icon">📥</div>
+          <div class="drop-title">ここにファイルをドロップ</div>
+          <div class="drop-sub">.docx / .pptx / .xlsx など対応</div>
+          <input type="file" id="fi-to-pdf" accept=".docx,.doc,.pptx,.ppt,.xlsx,.xls">
+        </div>
+        <div class="file-chip" id="fc-to-pdf">
+          <div class="file-chip-icon">📄</div>
+          <div class="file-chip-info">
+            <div class="file-chip-name" id="fc-to-pdf-name"></div>
+            <div class="file-chip-size" id="fc-to-pdf-size"></div>
+          </div>
+          <button class="file-chip-remove" onclick="clearFile('to-pdf')">✕</button>
+        </div>
+      </div>
+      <div class="progress-wrap" id="pw-to-pdf"><div class="progress-label">変換中です。しばらくお待ちください...</div><div class="progress-bar"><div class="progress-fill"></div></div></div>
+      <div class="result" id="rv-to-pdf"></div>
+      <button class="btn btn-primary" id="btn-to-pdf" onclick="doToPdf()" disabled>PDF に変換する</button>
+    </div>
+
+    <!-- PDF → PPTX -->
+    <div class="panel" id="panel-to-pptx">
+      <div class="panel-title">PDF → PowerPoint 変換</div>
+      <div class="panel-desc">PDF ファイルを編集可能な PowerPoint (.pptx) に変換します。</div>
+      <div class="card">
+        <div class="drop-zone" id="dz-to-pptx">
+          <div class="drop-icon">📊</div>
+          <div class="drop-title">PDF をドロップ</div>
+          <div class="drop-sub">.pdf ファイルのみ</div>
+          <input type="file" id="fi-to-pptx" accept=".pdf">
+        </div>
+        <div class="file-chip" id="fc-to-pptx">
+          <div class="file-chip-icon">📄</div>
+          <div class="file-chip-info">
+            <div class="file-chip-name" id="fc-to-pptx-name"></div>
+            <div class="file-chip-size" id="fc-to-pptx-size"></div>
+          </div>
+          <button class="file-chip-remove" onclick="clearFile('to-pptx')">✕</button>
+        </div>
+      </div>
+      <div class="progress-wrap" id="pw-to-pptx"><div class="progress-label">変換中です。しばらくお待ちください...</div><div class="progress-bar"><div class="progress-fill"></div></div></div>
+      <div class="result" id="rv-to-pptx"></div>
+      <button class="btn btn-primary" id="btn-to-pptx" onclick="doExport('pptx')" disabled>PowerPoint に変換する</button>
+    </div>
+
+    <!-- PDF → DOCX -->
+    <div class="panel" id="panel-to-docx">
+      <div class="panel-title">PDF → Word 変換</div>
+      <div class="panel-desc">PDF ファイルを編集可能な Word 文書 (.docx) に変換します。</div>
+      <div class="card">
+        <div class="drop-zone" id="dz-to-docx">
+          <div class="drop-icon">📝</div>
+          <div class="drop-title">PDF をドロップ</div>
+          <div class="drop-sub">.pdf ファイルのみ</div>
+          <input type="file" id="fi-to-docx" accept=".pdf">
+        </div>
+        <div class="file-chip" id="fc-to-docx">
+          <div class="file-chip-icon">📄</div>
+          <div class="file-chip-info">
+            <div class="file-chip-name" id="fc-to-docx-name"></div>
+            <div class="file-chip-size" id="fc-to-docx-size"></div>
+          </div>
+          <button class="file-chip-remove" onclick="clearFile('to-docx')">✕</button>
+        </div>
+      </div>
+      <div class="progress-wrap" id="pw-to-docx"><div class="progress-label">変換中です。しばらくお待ちください...</div><div class="progress-bar"><div class="progress-fill"></div></div></div>
+      <div class="result" id="rv-to-docx"></div>
+      <button class="btn btn-primary" id="btn-to-docx" onclick="doExport('docx')" disabled>Word に変換する</button>
+    </div>
+
+    <!-- パスワード設定 -->
+    <div class="panel" id="panel-protect">
+      <div class="panel-title">パスワード保護</div>
+      <div class="panel-desc">PDF に AES-256 暗号化パスワードを設定します。</div>
+      <div class="card">
+        <div class="drop-zone" id="dz-protect">
+          <div class="drop-icon">🔒</div>
+          <div class="drop-title">PDF をドロップ</div>
+          <div class="drop-sub">.pdf ファイルのみ</div>
+          <input type="file" id="fi-protect" accept=".pdf">
+        </div>
+        <div class="file-chip" id="fc-protect">
+          <div class="file-chip-icon">📄</div>
+          <div class="file-chip-info">
+            <div class="file-chip-name" id="fc-protect-name"></div>
+            <div class="file-chip-size" id="fc-protect-size"></div>
+          </div>
+          <button class="file-chip-remove" onclick="clearFile('protect')">✕</button>
+        </div>
+      </div>
+      <div class="form-row" style="margin-bottom:14px;">
+        <div class="form-group" style="margin:0"><label class="form-label">ユーザーパスワード</label><input class="form-input" type="password" id="pw-user" placeholder="開くときに必要なパスワード"></div>
+        <div class="form-group" style="margin:0"><label class="form-label">オーナーパスワード（任意）</label><input class="form-input" type="password" id="pw-owner" placeholder="省略時はユーザーPWと同じ"></div>
+      </div>
+      <div class="progress-wrap" id="pw-protect"><div class="progress-label">パスワードを設定中...</div><div class="progress-bar"><div class="progress-fill"></div></div></div>
+      <div class="result" id="rv-protect"></div>
+      <button class="btn btn-primary" id="btn-protect" onclick="doProtect()" disabled>パスワードを設定する</button>
+    </div>
+
+    <!-- 保護チェック -->
+    <div class="panel" id="panel-check">
+      <div class="panel-title">パスワード保護チェック</div>
+      <div class="panel-desc">PDF の暗号化状態とドキュメント情報を確認します。</div>
+      <div class="card">
+        <div class="drop-zone" id="dz-check">
+          <div class="drop-icon">🔍</div>
+          <div class="drop-title">PDF をドロップ</div>
+          <div class="drop-sub">.pdf ファイルのみ</div>
+          <input type="file" id="fi-check" accept=".pdf">
+        </div>
+        <div class="file-chip" id="fc-check">
+          <div class="file-chip-icon">📄</div>
+          <div class="file-chip-info">
+            <div class="file-chip-name" id="fc-check-name"></div>
+            <div class="file-chip-size" id="fc-check-size"></div>
+          </div>
+          <button class="file-chip-remove" onclick="clearFile('check')">✕</button>
+        </div>
+      </div>
+      <div class="progress-wrap" id="pw-check"><div class="progress-label">PDF を解析中...</div><div class="progress-bar"><div class="progress-fill"></div></div></div>
+      <div class="info-grid" id="check-grid" style="display:none;"></div>
+      <div class="result" id="rv-check"></div>
+      <button class="btn btn-primary" id="btn-check" onclick="doCheck()" disabled>チェックする</button>
+    </div>
+
+    <!-- メタデータ削除 -->
+    <div class="panel" id="panel-metadata">
+      <div class="panel-title">メタデータ削除</div>
+      <div class="panel-desc">作成者・ソフトウェア情報・日付などの個人情報を PDF から削除します。</div>
+      <div class="card">
+        <div class="drop-zone" id="dz-metadata">
+          <div class="drop-icon">🧹</div>
+          <div class="drop-title">PDF をドロップ</div>
+          <div class="drop-sub">.pdf ファイルのみ</div>
+          <input type="file" id="fi-metadata" accept=".pdf">
+        </div>
+        <div class="file-chip" id="fc-metadata">
+          <div class="file-chip-icon">📄</div>
+          <div class="file-chip-info">
+            <div class="file-chip-name" id="fc-metadata-name"></div>
+            <div class="file-chip-size" id="fc-metadata-size"></div>
+          </div>
+          <button class="file-chip-remove" onclick="clearFile('metadata')">✕</button>
+        </div>
+      </div>
+      <div class="progress-wrap" id="pw-metadata"><div class="progress-label">メタデータを削除中...</div><div class="progress-bar"><div class="progress-fill"></div></div></div>
+      <div class="result" id="rv-metadata"></div>
+      <button class="btn btn-primary" id="btn-metadata" onclick="doMetadata()" disabled>メタデータを削除する</button>
+    </div>
+
+    <!-- PDFビューア -->
+    <div class="panel" id="panel-viewer">
+      <div class="panel-title">PDF ビューア</div>
+      <div class="panel-desc">ブラウザ上で PDF を確認できます。ページ番号を把握してから編集してください。</div>
+      <div class="card">
+        <div class="drop-zone" id="dz-viewer">
+          <div class="drop-icon">👁</div>
+          <div class="drop-title">PDF をドロップ</div>
+          <div class="drop-sub">.pdf ファイルのみ</div>
+          <input type="file" id="fi-viewer" accept=".pdf">
+        </div>
+      </div>
+      <div id="viewer-body" style="display:none;">
+        <div class="viewer-bar">
+          <div class="viewer-bar-name" id="vb-name"></div>
+          <div class="viewer-bar-count" id="vb-count"></div>
+          <button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="clearViewer()">閉じる</button>
+        </div>
+        <div class="viewer-pages" id="viewer-pages"></div>
+      </div>
+    </div>
+
+    <!-- ページ並び替え -->
+    <div class="panel" id="panel-organize">
+      <div class="panel-title">ページ並び替え</div>
+      <div class="panel-desc">ドラッグ＆ドロップでページ順を変更できます。✕ でページを削除します。</div>
+      <div class="card">
+        <div class="drop-zone" id="dz-organize">
+          <div class="drop-icon">🔀</div>
+          <div class="drop-title">PDF をドロップ</div>
+          <div class="drop-sub">.pdf ファイルのみ</div>
+          <input type="file" id="fi-organize" accept=".pdf">
+        </div>
+      </div>
+      <div id="organize-body" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <span style="font-size:12px;color:#6e6e73;">ドラッグして順番を変更。✕ でページを削除。</span>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-secondary" onclick="resetOrganize()">リセット</button>
+            <button class="btn btn-primary" id="btn-organize" onclick="doOrganize()">保存して出力</button>
+          </div>
+        </div>
+        <div class="page-grid" id="page-grid"></div>
+        <div class="progress-wrap" id="pw-organize"><div class="progress-label">ページを並び替え中...</div><div class="progress-bar"><div class="progress-fill"></div></div></div>
+        <div class="result" id="rv-organize"></div>
+      </div>
+    </div>
+
+    <!-- ページ削除 -->
+    <div class="panel" id="panel-delete">
+      <div class="panel-title">ページ削除</div>
+      <div class="panel-desc">削除したいページ番号をカンマ区切りで指定します。</div>
+      <div class="card">
+        <div class="drop-zone" id="dz-delete">
+          <div class="drop-icon">🗑</div>
+          <div class="drop-title">PDF をドロップ</div>
+          <div class="drop-sub">.pdf ファイルのみ</div>
+          <input type="file" id="fi-delete" accept=".pdf">
+        </div>
+        <div class="file-chip" id="fc-delete">
+          <div class="file-chip-icon">📄</div>
+          <div class="file-chip-info">
+            <div class="file-chip-name" id="fc-delete-name"></div>
+            <div class="file-chip-size" id="fc-delete-size"></div>
+          </div>
+          <button class="file-chip-remove" onclick="clearFile('delete')">✕</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">削除するページ番号 <span id="delete-hint" style="color:#aeaeb2;font-weight:400;"></span></label>
+        <input class="form-input" type="text" id="delete-pages-input" placeholder="例: 2, 4, 7">
+      </div>
+      <div class="progress-wrap" id="pw-delete"><div class="progress-label">ページを削除中...</div><div class="progress-bar"><div class="progress-fill"></div></div></div>
+      <div class="result" id="rv-delete"></div>
+      <button class="btn btn-primary" id="btn-delete" onclick="doDelete()" disabled>ページを削除する</button>
+    </div>
+
+  </main>
+</div>
+
+<script>
+const API = '/api';
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// ── NAV ──
+document.querySelectorAll('.nav-item').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById(`panel-${el.dataset.panel}`).classList.add('active');
+  });
+});
+
+// ── FILES ──
+const files = {};
+
+function setupDZ(key) {
+  const dz = document.getElementById(`dz-${key}`);
+  const fi = document.getElementById(`fi-${key}`);
+  if (!dz || !fi) return;
+  fi.addEventListener('change', () => { if (fi.files[0]) setFile(key, fi.files[0]); });
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragging'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('dragging'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('dragging');
+    if (e.dataTransfer.files[0]) setFile(key, e.dataTransfer.files[0]);
+  });
+}
+
+function setFile(key, file) {
+  files[key] = file;
+  const fc = document.getElementById(`fc-${key}`);
+  if (fc) {
+    document.getElementById(`fc-${key}-name`).textContent = file.name;
+    document.getElementById(`fc-${key}-size`).textContent = fmtSize(file.size);
+    fc.classList.add('visible');
+  }
+  const btn = document.getElementById(`btn-${key}`);
+  if (btn) btn.disabled = false;
+  if (key === 'viewer')   loadViewer(file);
+  if (key === 'organize') loadOrganize(file);
+  if (key === 'delete')   loadDeleteHint(file);
+}
+
+function clearFile(key) {
+  files[key] = null;
+  const fc = document.getElementById(`fc-${key}`);
+  if (fc) fc.classList.remove('visible');
+  const btn = document.getElementById(`btn-${key}`);
+  if (btn) btn.disabled = true;
+  hideResult(key);
+}
+
+function fmtSize(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+
+// ── UI HELPERS ──
+function showProg(key, msg) {
+  const el = document.getElementById(`pw-${key}`);
+  if (el) { el.querySelector('.progress-label').textContent = msg; el.classList.add('visible'); }
+}
+function hideProg(key) {
+  const el = document.getElementById(`pw-${key}`);
+  if (el) el.classList.remove('visible');
+}
+function showResult(key, ok, title, sub, dlUrl, dlName) {
+  const el = document.getElementById(`rv-${key}`);
+  if (!el) return;
+  el.className = `result ${ok ? 'success' : 'error'} visible`;
+  el.innerHTML = `
+    <div class="result-icon">${ok ? '✅' : '❌'}</div>
+    <div class="result-body">
+      <div class="result-title">${title}</div>
+      ${sub ? `<div class="result-sub">${sub}</div>` : ''}
+    </div>
+    ${dlUrl ? `<a href="${dlUrl}" download="${dlName}" class="result-dl">ダウンロード</a>` : ''}
+  `;
+}
+function hideResult(key) {
+  const el = document.getElementById(`rv-${key}`);
+  if (el) { el.className = 'result'; el.innerHTML = ''; }
+}
+
+// ── API ──
+async function callApi(endpoint, fd, key, progMsg) {
+  showProg(key, progMsg);
+  hideResult(key);
+  const btn = document.getElementById(`btn-${key}`);
+  const orig = btn?.innerHTML;
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 処理中...'; }
+  try {
+    const res = await fetch(`${API}${endpoint}`, { method: 'POST', body: fd });
+    hideProg(key);
+    if (btn) { btn.innerHTML = orig; btn.disabled = false; }
+    if (!res.ok) {
+      const e = await res.json().catch(()=>({}));
+      showResult(key, false, 'エラーが発生しました', e.error || `HTTP ${res.status}`);
+      return null;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const cd = res.headers.get('content-disposition') || '';
+    const m = cd.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+    return { url, filename: m ? m[1].replace(/['"]/g,'') : 'output' };
+  } catch {
+    hideProg(key);
+    if (btn) { btn.innerHTML = orig; btn.disabled = false; }
+    showResult(key, false, '接続エラー', 'サーバーが起動しているか確認してください（localhost:3000）');
+    return null;
+  }
+}
+
+// ── OPERATIONS ──
+async function doToPdf() {
+  if (!files['to-pdf']) return;
+  const fd = new FormData(); fd.append('file', files['to-pdf']);
+  const r = await callApi('/convert-to-pdf', fd, 'to-pdf', '変換中です。しばらくお待ちください...');
+  if (r) showResult('to-pdf', true, '変換完了', `${files['to-pdf'].name} → PDF`, r.url, r.filename);
+}
+
+async function doExport(type) {
+  const key = `to-${type}`;
+  if (!files[key]) return;
+  const fd = new FormData(); fd.append('file', files[key]);
+  const ep = type === 'pptx' ? '/pdf-to-pptx' : '/pdf-to-docx';
+  const label = type === 'pptx' ? 'PowerPoint (.pptx)' : 'Word (.docx)';
+  const r = await callApi(ep, fd, key, '変換中です。しばらくお待ちください...');
+  if (r) showResult(key, true, '変換完了', `PDF → ${label}`, r.url, r.filename);
+}
+
+async function doProtect() {
+  if (!files.protect) return;
+  const pw = document.getElementById('pw-user').value.trim();
+  if (!pw) { showResult('protect', false, 'パスワードを入力してください', ''); return; }
+  const fd = new FormData();
+  fd.append('file', files.protect);
+  fd.append('password', pw);
+  fd.append('ownerPassword', document.getElementById('pw-owner').value || pw);
+  const r = await callApi('/protect-pdf', fd, 'protect', 'パスワードを設定中...');
+  if (r) showResult('protect', true, 'パスワード設定完了', 'AES-256 で暗号化しました', r.url, r.filename);
+}
+
+async function doCheck() {
+  if (!files.check) return;
+  showProg('check', 'PDF を解析中...');
+  hideResult('check');
+  document.getElementById('check-grid').style.display = 'none';
+  const btn = document.getElementById('btn-check');
+  const orig = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 解析中...';
+  try {
+    const fd = new FormData(); fd.append('file', files.check);
+    const res = await fetch(`${API}/check-protection`, { method: 'POST', body: fd });
+    const data = await res.json();
+    hideProg('check'); btn.innerHTML = orig; btn.disabled = false;
+    const grid = document.getElementById('check-grid');
+    grid.style.display = 'grid';
+    grid.innerHTML = `
+      <div class="info-cell">
+        <div class="info-cell-label">パスワード保護</div>
+        <div class="info-cell-value" style="color:${data.protected ? '#ff3b30' : '#34c759'}">${data.protected ? '🔒 保護あり' : '🔓 保護なし'}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-cell-label">ページ数</div>
+        <div class="info-cell-value">${data.info?.pages || '—'} ページ</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-cell-label">PDF バージョン</div>
+        <div class="info-cell-value">${data.info?.properties?.PDFVersion || '—'}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-cell-label">ファイル名</div>
+        <div class="info-cell-value" style="font-size:12px;word-break:break-all;">${files.check.name}</div>
+      </div>
+    `;
+  } catch {
+    hideProg('check'); btn.innerHTML = orig; btn.disabled = false;
+    showResult('check', false, '接続エラー', 'サーバーが起動しているか確認してください');
+  }
+}
+
+async function doMetadata() {
+  if (!files.metadata) return;
+  const fd = new FormData(); fd.append('file', files.metadata);
+  const r = await callApi('/remove-metadata', fd, 'metadata', 'メタデータを削除中...');
+  if (r) showResult('metadata', true, 'メタデータ削除完了', '個人情報・ソフトウェア情報を削除しました', r.url, r.filename);
+}
+
+// ── VIEWER ──
+async function loadViewer(file) {
+  const arr = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arr }).promise;
+  document.getElementById('vb-name').textContent = file.name;
+  document.getElementById('vb-count').textContent = `全 ${pdf.numPages} ページ`;
+  const container = document.getElementById('viewer-pages');
+  container.innerHTML = '';
+  document.getElementById('viewer-body').style.display = 'block';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const vp = page.getViewport({ scale: 1.2 });
+    const canvas = document.createElement('canvas');
+    canvas.width = vp.width; canvas.height = vp.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+    const wrap = document.createElement('div'); wrap.className = 'viewer-page';
+    const badge = document.createElement('div'); badge.className = 'viewer-page-badge'; badge.textContent = `p.${i}`;
+    wrap.appendChild(canvas); wrap.appendChild(badge);
+    container.appendChild(wrap);
+  }
+}
+function clearViewer() {
+  document.getElementById('viewer-body').style.display = 'none';
+  document.getElementById('viewer-pages').innerHTML = '';
+}
+
+// ── ORGANIZE ──
+let orgFile = null;
+
+async function loadOrganize(file) {
+  orgFile = file;
+  const arr = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arr }).promise;
+  const grid = document.getElementById('page-grid');
+  grid.innerHTML = '<div style="font-size:12px;color:#aeaeb2;">サムネイルを生成中...</div>';
+  document.getElementById('organize-body').style.display = 'block';
+  grid.innerHTML = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const vp = page.getViewport({ scale: 0.5 });
+    const canvas = document.createElement('canvas');
+    canvas.width = vp.width; canvas.height = vp.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
+
+    const thumb = document.createElement('div');
+    thumb.className = 'page-thumb'; thumb.dataset.page = i; thumb.draggable = true;
+    const cw = document.createElement('div'); cw.className = 'page-canvas'; cw.appendChild(canvas);
+    const footer = document.createElement('div'); footer.className = 'page-footer';
+    const num = document.createElement('div'); num.className = 'page-num'; num.textContent = `p.${i}`;
+    const del = document.createElement('button'); del.className = 'page-del'; del.textContent = '✕';
+    del.onclick = e => { e.stopPropagation(); thumb.style.opacity = '0'; thumb.style.transition = 'opacity 0.2s'; setTimeout(() => thumb.remove(), 200); };
+    footer.appendChild(num); footer.appendChild(del);
+    thumb.appendChild(cw); thumb.appendChild(footer);
+    grid.appendChild(thumb);
+
+    thumb.addEventListener('dragstart', e => { e.dataTransfer.setData('text', i); thumb.style.opacity = '0.4'; });
+    thumb.addEventListener('dragend',   () => thumb.style.opacity = '1');
+    thumb.addEventListener('dragover',  e => { e.preventDefault(); thumb.classList.add('drag-over'); });
+    thumb.addEventListener('dragleave', () => thumb.classList.remove('drag-over'));
+    thumb.addEventListener('drop', e => {
+      e.preventDefault(); thumb.classList.remove('drag-over');
+      const fromEl = grid.querySelector(`[data-page="${e.dataTransfer.getData('text')}"]`);
+      if (fromEl && fromEl !== thumb) grid.insertBefore(fromEl, thumb);
+    });
+  }
+}
+
+function resetOrganize() { if (orgFile) loadOrganize(orgFile); }
+
+async function doOrganize() {
+  if (!orgFile) return;
+  const thumbs = [...document.getElementById('page-grid').querySelectorAll('.page-thumb')];
+  const fd = new FormData(); fd.append('file', orgFile); fd.append('pagesOrder', thumbs.map(t => t.dataset.page).join(','));
+  showProg('organize', 'ページを並び替え中...');
+  const btn = document.getElementById('btn-organize');
+  const orig = btn.innerHTML; btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 処理中...';
+  try {
+    const res = await fetch(`${API}/organize-pages`, { method: 'POST', body: fd });
+    hideProg('organize'); btn.innerHTML = orig; btn.disabled = false;
+    if (!res.ok) { const e = await res.json().catch(()=>({})); showResult('organize', false, 'エラー', e.error || ''); return; }
+    const blob = await res.blob();
+    showResult('organize', true, '並び替え完了', `${thumbs.length} ページで出力しました`, URL.createObjectURL(blob), 'organized.pdf');
+  } catch {
+    hideProg('organize'); btn.innerHTML = orig; btn.disabled = false;
+    showResult('organize', false, '接続エラー', 'サーバーが起動しているか確認してください');
+  }
+}
+
+// ── DELETE ──
+async function loadDeleteHint(file) {
+  try {
+    const arr = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arr }).promise;
+    document.getElementById('delete-hint').textContent = `（全 ${pdf.numPages} ページ）`;
+  } catch {}
+}
+
+async function doDelete() {
+  if (!files.delete) return;
+  const pages = document.getElementById('delete-pages-input').value.trim();
+  if (!pages) { showResult('delete', false, 'ページ番号を入力してください', ''); return; }
+  const fd = new FormData(); fd.append('file', files.delete); fd.append('pagesToDelete', pages);
+  const r = await callApi('/delete-pages', fd, 'delete', 'ページを削除中...');
+  if (r) showResult('delete', true, '削除完了', `ページ ${pages} を削除しました`, r.url, r.filename);
+}
+
+// ── SETUP & HEALTH ──
+['to-pdf','to-pptx','to-docx','protect','check','metadata','viewer','organize','delete'].forEach(setupDZ);
+
+async function checkHealth() {
+  try {
+    const ok = (await fetch(`${API}/health`)).ok;
+    document.getElementById('status-dot').className = `status-dot${ok ? '' : ' offline'}`;
+    document.getElementById('status-text').textContent = ok ? 'サーバー接続済み' : 'サーバー未接続';
+  } catch {
+    document.getElementById('status-dot').className = 'status-dot offline';
+    document.getElementById('status-text').textContent = 'サーバー未接続';
+  }
+}
+checkHealth();
+setInterval(checkHealth, 30000);
+</script>
+</body>
+</html>
