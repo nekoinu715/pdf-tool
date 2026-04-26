@@ -532,6 +532,25 @@ body {
 </div>
 
 <script>
+// ── SECRET KEY AUTH ──
+const SECRET_KEY = 'acrobat-demo-sasaki_tZ8$@C6LhnJ&k%d0K$X^4J1OKV1Tajg8OhMbyx%s';
+
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('key') !== SECRET_KEY) {
+    document.body.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f5f5f7;font-family:Inter,sans-serif;">
+        <div style="text-align:center;padding:40px;">
+          <div style="font-size:40px;margin-bottom:16px;">🔒</div>
+          <div style="font-size:18px;font-weight:600;color:#1d1d1f;margin-bottom:8px;">アクセスが制限されています</div>
+          <div style="font-size:13px;color:#6e6e73;">このページにアクセスするには、正しいURLが必要です。</div>
+        </div>
+      </div>
+    `;
+    throw new Error('Unauthorized');
+  }
+})();
+
 const API = '/api';
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
